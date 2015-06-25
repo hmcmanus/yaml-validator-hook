@@ -17,7 +17,6 @@ import com.atlassian.stash.repository.Repository;
 import com.atlassian.stash.server.ApplicationPropertiesService;
 import com.atlassian.stash.util.Page;
 import com.atlassian.stash.util.PageUtils;
-import org.apache.commons.io.FileUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -125,7 +124,6 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
 
             }
             LOG.debug("Removing the directory created in order to validate yaml");
-            deleteTempDir(tempDirPath);
         } catch (IOException e) {
             LOG.error("Problem creating the a temp directory to validate yaml" + e.getMessage());
         }
@@ -165,8 +163,21 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
                     LOG.error("Unable to close input stream");
                 }
             }
+            removeTempFile(file);
         }
         return fileIsValid;
+    }
+
+    /**
+     * Removes the temporary file which has been created in order to test the yaml
+     * @param file The file to be removed
+     */
+    private void removeTempFile(Path file) {
+        try {
+            Files.delete(file);
+        } catch (IOException e) {
+            LOG.error("Unable to delete temporary file: " + e.getMessage());
+        }
     }
 
     /**
@@ -175,25 +186,11 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      * @return The path of the temporary directory
      */
     private Path createTempDir() throws IOException {
-
         File stashTempDir = applicationPropertiesService.getTempDir();
         Path tempFilesDir = Paths.get(stashTempDir.getPath(), WORKING_DIR);
         Files.createDirectories(tempFilesDir);
 
         return tempFilesDir;
-    }
-
-    /**
-     * Delete the working directory for the push yaml file check
-     *
-     * @param tempDirPath The temporary directory to be deleted
-     */
-    private void deleteTempDir(Path tempDirPath) {
-        try {
-            FileUtils.deleteDirectory(new File(tempDirPath.toString()));
-        } catch (IOException e) {
-            LOG.warn("Failed to delete temporary working directory during yaml check: " + tempDirPath.toString(), e);
-        }
     }
 
     /**
