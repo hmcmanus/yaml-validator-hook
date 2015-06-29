@@ -4,10 +4,10 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmanus.scm.stash</groupId>
     <artifactId>yaml-validator-hook</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <organization>
-        <name>Example Company</name>
-        <url>http://www.example.com/</url>
+        <name>Hugh McManus</name>
+        <url>https://github.com/hmcmanus/yaml-validator-hook</url>
     </organization>
     <name>yaml-validator-hook</name>
     <description>This is the com.mcmanus.scm.stash:yaml-validator-hook plugin for Atlassian Stash.</description>
