@@ -5,8 +5,8 @@
     <description>${project.description}</description>
     <version>${project.version}</version>
     <vendor name="${project.organization.name}" url="${project.organization.url}"/>
-    <param name="plugin-icon">images/pluginIcon.png</param>
-    <param name="plugin-logo">images/pluginLogo.png</param>
+    <param name="plugin-icon">images/GoodBad.jpeg</param>
+    <param name="plugin-logo">images/GoodBad.jpeg</param>
   </plugin-info>
   <!-- add our i18n resource -->
   <resource type="i18n" name="i18n" location="yaml-validator-hook"/>
@@ -20,8 +20,8 @@
   </web-resource>
   <!-- import from the product container -->
   <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
-  <repository-hook name="Yaml Validator Pre Receive Hook" i18n-name-key="my-pre-receive-repository-hook.name" key="my-pre-receive-repository-hook" class="com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook">
-    <description key="my-pre-receive-repository-hook.description">Rejects invalid yaml files pushed to the repository</description>
+  <repository-hook name="Yaml Validator Pre Receive Hook" i18n-name-key="yaml-validator-hook.name" key="yaml-validator-hook" class="com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook">
+    <description key="yaml-validator-hook.description">Rejects invalid yaml files pushed to the repository</description>
     <icon>images/GoodBad.jpeg</icon>
   </repository-hook>
 </atlassian-plugin>

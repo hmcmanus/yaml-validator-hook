@@ -4,13 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmanus.scm.stash</groupId>
     <artifactId>yaml-validator-hook</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.3-SNAPSHOT</version>
     <organization>
         <name>Hugh McManus</name>
         <url>https://github.com/hmcmanus/yaml-validator-hook</url>
     </organization>
     <name>yaml-validator-hook</name>
-    <description>This is the com.mcmanus.scm.stash:yaml-validator-hook plugin for Atlassian Stash.</description>
+    <description>This is the yaml-validator-hook plugin for Atlassian Stash.</description>
     <packaging>atlassian-plugin</packaging>
     <properties>
         <stash.version>3.10.0</stash.version>
@@ -18,6 +18,14 @@
         <amps.version>5.0.13</amps.version>
         <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
     </properties>
+
+    <scm>
+        <developerConnection>scm:git:https://github.com/hmcmanus/yaml-validator-hook.git</developerConnection>
+        <connection>scm:git:https://github.com/hmcmanus/yaml-validator-hook.git</connection>
+        <url>https://github.com/hmcmanus/yaml-validator-hook.git</url>
+        <tag>${project.version}</tag>
+    </scm>
+
     <dependencyManagement>
         <dependencies>
             <dependency>
