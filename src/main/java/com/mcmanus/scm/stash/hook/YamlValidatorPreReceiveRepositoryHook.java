@@ -1,8 +1,6 @@
 package com.mcmanus.scm.stash.hook;
 
-import com.atlassian.stash.commit.Commit;
-import com.atlassian.stash.commit.CommitService;
-import com.atlassian.stash.commit.CommitsBetweenRequest;
+import com.atlassian.stash.commit.*;
 import com.atlassian.stash.content.Change;
 import com.atlassian.stash.content.ChangeType;
 import com.atlassian.stash.content.ChangesRequest;
@@ -10,6 +8,7 @@ import com.atlassian.stash.content.ContentService;
 import com.atlassian.stash.hook.HookResponse;
 import com.atlassian.stash.hook.repository.PreReceiveRepositoryHook;
 import com.atlassian.stash.hook.repository.RepositoryHookContext;
+import com.atlassian.stash.idx.CommitIndex;
 import com.atlassian.stash.io.MoreSuppliers;
 import com.atlassian.stash.io.TypeAwareOutputSupplier;
 import com.atlassian.stash.repository.RefChange;
@@ -19,14 +18,12 @@ import com.atlassian.stash.util.Page;
 import com.atlassian.stash.util.PageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -39,13 +36,18 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
     private final CommitService commitService;
     private final ApplicationPropertiesService applicationPropertiesService;
     private final ContentService contentService;
+    private final CommitIndex commitIndex;
+    private final YamlFileValidator yamlFileValidator;
 
     public YamlValidatorPreReceiveRepositoryHook(CommitService commitService,
                                                  ApplicationPropertiesService applicationPropertiesService,
-                                                 ContentService contentService){
+                                                 ContentService contentService,
+                                                 CommitIndex commitIndex){
         this.commitService = commitService;
         this.applicationPropertiesService = applicationPropertiesService;
         this.contentService = contentService;
+        this.commitIndex = commitIndex;
+        this.yamlFileValidator = new YamlFileValidator();
     }
 
     /**
@@ -62,13 +64,13 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         boolean allFilesValid = true;
         ConcurrentMap<String, Commit> pathChanges = new ConcurrentHashMap<String, Commit>();
         for (RefChange refChange : refChanges) {
-            final CommitsBetweenRequest request = new CommitsBetweenRequest.Builder(context.getRepository())
-                    .exclude(refChange.getFromHash())
-                    .include(refChange.getToHash())
-                    .build();
+            LOG.debug("Processing refchange of type: " + refChange.getType());
 
-            final Page<Commit> commits = commitService.getCommitsBetween(request, PageUtils.newRequest(0, PAGE_REQUEST_LIMIT));
-            for(Commit commit: commits.getValues()) {
+            Collection<Commit> commitsToCheck = Collections.synchronizedList(new ArrayList<Commit>());
+
+            findCommitsToCheck(refChange.getToHash(), context.getRepository(), commitsToCheck);
+
+            for (Commit commit : commitsToCheck) {
                 addFileChangesOnCommit(pathChanges, context.getRepository(), commit);
             }
         }
@@ -80,6 +82,25 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         }
 
         return allFilesValid;
+    }
+
+    /**
+     * Recursive method to get the list of commits which are new on the branch
+     *
+     * @param hash The commit hash
+     * @param repository The repository that the commits have been completed on
+     * @param commitsToProcess A list of commits which are new
+     */
+    private void findCommitsToCheck(String hash, Repository repository, Collection<Commit> commitsToProcess) {
+        if (!commitIndex.isMemberOf(hash, repository)) {
+            final CommitRequest request = new CommitRequest.Builder(repository, hash).build();
+            final Commit commit = commitService.getCommit(request);
+            LOG.debug("Found commit to check " + hash);
+            commitsToProcess.add(commit);
+            for (MinimalCommit parent: commit.getParents()) {
+                findCommitsToCheck(parent.getId(), repository, commitsToProcess);
+            }
+        }
     }
 
     /**
@@ -117,7 +138,10 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
                     outputStream.close();
                 }
 
-                if (!isFileValid(tempFilePath, hookResponse, filePath)) {
+                boolean fileIsValid = yamlFileValidator.isValidYamlFile(tempFilePath, hookResponse, filePath);
+                removeTempFile(tempFilePath);
+
+                if (!fileIsValid) {
                     allFilesAreValid = false;
                     break;
                 }
@@ -129,43 +153,6 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         }
 
         return allFilesAreValid;
-    }
-
-    /**
-     * This method checks a individual file to make sure it's valid yaml
-     * @param file The temporary file to be checked
-     * @param hookResponse The response to the user
-     * @param filePath The reference file path to the repository
-     * @return boolean denoting if the file is valid or not
-     */
-    private boolean isFileValid(Path file, HookResponse hookResponse, String filePath) {
-        boolean fileIsValid = true;
-        InputStream input = null;
-        Yaml yaml = new Yaml();
-        try {
-            input = new FileInputStream(file.toFile());
-            try {
-                LOG.info("Attempting to validate file: " + filePath);
-                yaml.load(input);
-            } catch (Exception e) {
-                LOG.info("Rejecting push because following yaml file is invalid " + filePath);
-                hookResponse.err().println("ERROR: Invalid yaml file: " + filePath);
-                hookResponse.err().println(e.getMessage());
-                fileIsValid = false;
-            }
-        } catch (Exception e) {
-            LOG.error("Unable to create input stream for temporary file");
-        } finally {
-            if (input != null) {
-                try {
-                    input.close();
-                } catch (IOException e) {
-                    LOG.error("Unable to close input stream");
-                }
-            }
-            removeTempFile(file);
-        }
-        return fileIsValid;
     }
 
     /**
@@ -204,8 +191,8 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         final ChangesRequest changesRequest = new ChangesRequest.Builder(repository, commit.getId()).build();
         final Page<Change> changes = commitService.getChanges(changesRequest, PageUtils.newRequest(0, PAGE_REQUEST_LIMIT));
 
-        for(Change change : changes.getValues()){
-            if (!ChangeType.DELETE.equals(change.getType())){
+        for(Change change : changes.getValues()) {
+            if (!ChangeType.DELETE.equals(change.getType())) {
                 if (change.getPath().getExtension().equalsIgnoreCase(YAML_FILE_EXTENSION)) {
                     if (filesWithCommits.containsKey(change.getPath().toString())) {
                         if (commit.getAuthorTimestamp().after(filesWithCommits.get(change.getPath().toString()).getAuthorTimestamp())) {
