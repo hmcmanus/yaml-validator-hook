@@ -135,6 +135,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
                     LOG.debug("Writing temporary yaml file in order to validate " + tempFilePath);
                     outputStream.writeTo(Files.newOutputStream(tempFilePath));
                 } finally {
+                    LOG.debug("Attempting to close the output stream");
                     outputStream.close();
                 }
 
