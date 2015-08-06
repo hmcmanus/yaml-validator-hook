@@ -32,7 +32,9 @@ public class YamlFileValidator {
                 LOG.info("Attempting to validate file: " + filePath);
                 yaml.load(input);
             } catch (Exception e) {
-                LOG.info("Rejecting push because following yaml file is invalid " + filePath);
+                LOG.debug("Closing the input stream after exception with yaml load");
+                input.close();
+                LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
                 hookResponse.err().println("ERROR: Invalid yaml file: " + filePath);
                 hookResponse.err().println(e.getMessage());
                 fileIsValid = false;
@@ -42,10 +44,13 @@ public class YamlFileValidator {
         } finally {
             if (input != null) {
                 try {
+                    LOG.debug("Attempting to close the input stream");
                     input.close();
                 } catch (IOException e) {
                     LOG.error("Unable to close input stream");
                 }
+            } else {
+                LOG.debug("input stream found to be null");
             }
         }
         return fileIsValid;
