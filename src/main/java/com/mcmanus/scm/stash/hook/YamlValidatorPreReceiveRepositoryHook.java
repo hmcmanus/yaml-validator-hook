@@ -13,16 +13,13 @@ import com.atlassian.stash.io.MoreSuppliers;
 import com.atlassian.stash.io.TypeAwareOutputSupplier;
 import com.atlassian.stash.repository.RefChange;
 import com.atlassian.stash.repository.Repository;
-import com.atlassian.stash.server.ApplicationPropertiesService;
 import com.atlassian.stash.util.Page;
 import com.atlassian.stash.util.PageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.Yaml;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -30,24 +27,19 @@ import java.util.concurrent.ConcurrentMap;
 public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveRepositoryHook
 {
     private static final Logger LOG = LoggerFactory.getLogger(PreReceiveRepositoryHook.class);
+
     private static final int PAGE_REQUEST_LIMIT = 9999;
     private static final String YAML_FILE_EXTENSION = "yaml";
-    private static final String WORKING_DIR = "yamlValidator";
     private final CommitService commitService;
-    private final ApplicationPropertiesService applicationPropertiesService;
     private final ContentService contentService;
     private final CommitIndex commitIndex;
-    private final YamlFileValidator yamlFileValidator;
 
     public YamlValidatorPreReceiveRepositoryHook(CommitService commitService,
-                                                 ApplicationPropertiesService applicationPropertiesService,
                                                  ContentService contentService,
                                                  CommitIndex commitIndex){
         this.commitService = commitService;
-        this.applicationPropertiesService = applicationPropertiesService;
         this.contentService = contentService;
         this.commitIndex = commitIndex;
-        this.yamlFileValidator = new YamlFileValidator();
     }
 
     /**
@@ -115,9 +107,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
     private boolean areFilesValid(ConcurrentMap<String, Commit> pathChanges, Repository repository, HookResponse hookResponse) {
         LOG.info("Found " + pathChanges.size() + " yaml files to validate");
         boolean allFilesAreValid = true;
-        Path tempDirPath;
         try {
-            tempDirPath = createTempDir();
             for (String filePath : pathChanges.keySet()){
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
                 TypeAwareOutputSupplier os = MoreSuppliers.newTypeAwareOutputSupplierOf(outputStream);
@@ -128,22 +118,23 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
                         filePath,
                         os);
 
-                String uuid = UUID.randomUUID().toString();
-                Path tempFilePath = Paths.get(tempDirPath.toString(), uuid + "." + YAML_FILE_EXTENSION);
-
                 try {
-                    LOG.debug("Writing temporary yaml file in order to validate " + tempFilePath);
-                    outputStream.writeTo(Files.newOutputStream(tempFilePath));
+                    Yaml yaml = new Yaml();
+                    try {
+                        LOG.info("Attempting to validate yaml stream");
+                        yaml.load(outputStream.toString());
+                    } catch (Exception e) {
+                        LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
+                        hookResponse.err().println("ERROR: Invalid yaml file: " + filePath);
+                        hookResponse.err().println(e.getMessage());
+                        allFilesAreValid = false;
+                    }
                 } finally {
                     LOG.debug("Attempting to close the output stream");
                     outputStream.close();
                 }
 
-                boolean fileIsValid = yamlFileValidator.isValidYamlFile(tempFilePath, hookResponse, filePath);
-                removeTempFile(tempFilePath);
-
-                if (!fileIsValid) {
-                    allFilesAreValid = false;
+                if (!allFilesAreValid) {
                     break;
                 }
 
@@ -154,31 +145,6 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         }
 
         return allFilesAreValid;
-    }
-
-    /**
-     * Removes the temporary file which has been created in order to test the yaml
-     * @param file The file to be removed
-     */
-    private void removeTempFile(Path file) {
-        try {
-            Files.delete(file);
-        } catch (IOException e) {
-            LOG.error("Unable to delete temporary file: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Create a working directory for the push validation
-     *
-     * @return The path of the temporary directory
-     */
-    private Path createTempDir() throws IOException {
-        File stashTempDir = applicationPropertiesService.getTempDir();
-        Path tempFilesDir = Paths.get(stashTempDir.getPath(), WORKING_DIR);
-        Files.createDirectories(tempFilesDir);
-
-        return tempFilesDir;
     }
 
     /**
