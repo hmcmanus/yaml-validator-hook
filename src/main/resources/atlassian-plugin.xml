@@ -1,27 +1,38 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.name}" plugins-version="2">
-  <plugin-info>
-    <description>${project.description}</description>
-    <version>${project.version}</version>
-    <vendor name="${project.organization.name}" url="${project.organization.url}"/>
-    <param name="plugin-icon">images/GoodBad.jpeg</param>
-    <param name="plugin-logo">images/GoodBad.jpeg</param>
-  </plugin-info>
-  <!-- add our i18n resource -->
-  <resource type="i18n" name="i18n" location="yaml-validator-hook"/>
-  <!-- add our web resources -->
-  <web-resource key="yaml-validator-hook-resources" name="yaml-validator-hook Web Resources">
-    <dependency>com.atlassian.auiplugin:ajs</dependency>
-    <resource type="download" name="yaml-validator-hook.css" location="/css/yaml-validator-hook.css"/>
-    <resource type="download" name="yaml-validator-hook.js" location="/js/yaml-validator-hook.js"/>
-    <resource type="download" name="images/" location="/images"/>
-    <context>yaml-validator-hook</context>
-  </web-resource>
-  <!-- import from the product container -->
-  <component-import key="applicationProperties" interface="com.atlassian.sal.api.ApplicationProperties"/>
-  <repository-hook name="Yaml Validator Pre Receive Hook" i18n-name-key="yaml-validator-hook.name" key="yaml-validator-hook" class="com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook">
-    <description key="yaml-validator-hook.description">Rejects invalid yaml files pushed to the repository</description>
-    <icon>images/GoodBad.jpeg</icon>
-  </repository-hook>
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}"/>
+        <param name="plugin-icon">images/GoodBad.jpeg</param>
+        <param name="plugin-logo">images/GoodBad.jpeg</param>
+    </plugin-info>
+
+    <!-- add our i18n resource -->
+    <resource type="i18n" name="i18n" location="yaml-validator-hook"/>
+    
+    <!-- add our web resources -->
+    <web-resource key="yaml-validator-hook-resources" name="yaml-validator-hook Web Resources">
+        <dependency>com.atlassian.auiplugin:ajs</dependency>
+        
+        <resource type="download" name="yaml-validator-hook.css" location="/css/yaml-validator-hook.css"/>
+        <resource type="download" name="yaml-validator-hook.js" location="/js/yaml-validator-hook.js"/>
+        <resource type="download" name="images/" location="/images"/>
+
+        <context>yaml-validator-hook</context>
+    </web-resource>
+
+    <!-- import from the product container -->
+    <component-import key="commitService" interface="com.atlassian.bitbucket.commit.CommitService"/>
+    <component-import key="contentService" interface="com.atlassian.bitbucket.content.ContentService"/>
+    <component-import key="commitIndex" interface="com.atlassian.bitbucket.idx.CommitIndex"/>
+
+    <repository-hook name="Yaml Validator Pre Receive Hook" i18n-name-key="yaml-validator-hook.name"
+                     key="yaml-validator-hook" class="com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook">
+        <description key="yaml-validator-hook.description">Rejects invalid yaml files pushed to the repository
+        </description>
+        <icon>images/GoodBad.jpeg</icon>
+    </repository-hook>
+
 </atlassian-plugin>

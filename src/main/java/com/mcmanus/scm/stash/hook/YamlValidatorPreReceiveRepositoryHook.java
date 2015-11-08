@@ -1,20 +1,23 @@
 package com.mcmanus.scm.stash.hook;
 
-import com.atlassian.stash.commit.*;
-import com.atlassian.stash.content.Change;
-import com.atlassian.stash.content.ChangeType;
-import com.atlassian.stash.content.ChangesRequest;
-import com.atlassian.stash.content.ContentService;
-import com.atlassian.stash.hook.HookResponse;
-import com.atlassian.stash.hook.repository.PreReceiveRepositoryHook;
-import com.atlassian.stash.hook.repository.RepositoryHookContext;
-import com.atlassian.stash.idx.CommitIndex;
-import com.atlassian.stash.io.MoreSuppliers;
-import com.atlassian.stash.io.TypeAwareOutputSupplier;
-import com.atlassian.stash.repository.RefChange;
-import com.atlassian.stash.repository.Repository;
-import com.atlassian.stash.util.Page;
-import com.atlassian.stash.util.PageUtils;
+import com.atlassian.bitbucket.commit.Commit;
+import com.atlassian.bitbucket.commit.CommitRequest;
+import com.atlassian.bitbucket.commit.CommitService;
+import com.atlassian.bitbucket.commit.MinimalCommit;
+import com.atlassian.bitbucket.content.Change;
+import com.atlassian.bitbucket.content.ChangeType;
+import com.atlassian.bitbucket.content.ChangesRequest;
+import com.atlassian.bitbucket.content.ContentService;
+import com.atlassian.bitbucket.hook.HookResponse;
+import com.atlassian.bitbucket.hook.repository.PreReceiveRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookContext;
+import com.atlassian.bitbucket.idx.CommitIndex;
+import com.atlassian.bitbucket.io.TypeAwareOutputSupplier;
+import com.atlassian.bitbucket.repository.RefChange;
+import com.atlassian.bitbucket.repository.Repository;
+import com.atlassian.bitbucket.util.MoreSuppliers;
+import com.atlassian.bitbucket.util.Page;
+import com.atlassian.bitbucket.util.PageUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.yaml.snakeyaml.Yaml;
@@ -30,13 +33,15 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
 
     private static final int PAGE_REQUEST_LIMIT = 9999;
     private static final String YAML_FILE_EXTENSION = "yaml";
+
     private final CommitService commitService;
     private final ContentService contentService;
     private final CommitIndex commitIndex;
 
     public YamlValidatorPreReceiveRepositoryHook(CommitService commitService,
                                                  ContentService contentService,
-                                                 CommitIndex commitIndex){
+                                                 CommitIndex commitIndex
+                                                 ){
         this.commitService = commitService;
         this.contentService = contentService;
         this.commitIndex = commitIndex;
@@ -84,7 +89,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      * @param commitsToProcess A list of commits which are new
      */
     private void findCommitsToCheck(String hash, Repository repository, Collection<Commit> commitsToProcess) {
-        if (!commitIndex.isMemberOf(hash, repository)) {
+        if (!commitIndex.isIndexed(hash, repository)) {
             final CommitRequest request = new CommitRequest.Builder(repository, hash).build();
             final Commit commit = commitService.getCommit(request);
             LOG.debug("Found commit to check " + hash);
