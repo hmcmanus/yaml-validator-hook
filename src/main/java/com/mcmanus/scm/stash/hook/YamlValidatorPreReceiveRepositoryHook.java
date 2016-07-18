@@ -63,7 +63,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         for (RefChange refChange : refChanges) {
             LOG.debug("Processing refchange of type: " + refChange.getType());
 
-            Collection<Commit> commitsToCheck = Collections.synchronizedList(new ArrayList<Commit>());
+            Collection<Commit> commitsToCheck = Collections.synchronizedList(new ArrayList<>());
 
             findCommitsToCheck(refChange.getToHash(), context.getRepository(), commitsToCheck);
 
@@ -164,6 +164,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         final Page<Change> changes = commitService.getChanges(changesRequest, PageUtils.newRequest(0, PAGE_REQUEST_LIMIT));
 
         for(Change change : changes.getValues()) {
+            LOG.debug("Change type was: " + change.getType().name());
             if (!ChangeType.DELETE.equals(change.getType())) {
                 if (change.getPath().getExtension().equalsIgnoreCase(YAML_FILE_EXTENSION)) {
                     if (filesWithCommits.containsKey(change.getPath().toString())) {
