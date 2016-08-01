@@ -33,6 +33,10 @@
         <description key="yaml-validator-hook.description">Rejects invalid yaml files pushed to the repository
         </description>
         <icon>images/GoodBad.jpeg</icon>
+        <config-form name="External Async Post Receive Hook Config" key="external-post-receive-hook-config">
+            <view>com.mcmanus.scm.stash.hook.yamlvalidatorprereceivehook.view</view>
+            <directory location="/static/"/>
+        </config-form>
     </repository-hook>
 
 </atlassian-plugin>

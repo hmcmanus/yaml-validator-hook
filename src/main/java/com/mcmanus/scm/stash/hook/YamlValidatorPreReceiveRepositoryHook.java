@@ -32,7 +32,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
     private static final Logger LOG = LoggerFactory.getLogger(PreReceiveRepositoryHook.class);
 
     private static final int PAGE_REQUEST_LIMIT = 9999;
-    private static final String YAML_FILE_EXTENSION = "yaml";
+    private static final String EXTENSION_CONFIG_STRING = "extension";
 
     private final CommitService commitService;
     private final ContentService contentService;
@@ -60,6 +60,9 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
     {
         boolean allFilesValid = true;
         ConcurrentMap<String, Commit> pathChanges = new ConcurrentHashMap<String, Commit>();
+
+        String yamlFileExtension = context.getSettings().getString(EXTENSION_CONFIG_STRING);
+
         for (RefChange refChange : refChanges) {
             LOG.debug("Processing refchange of type: " + refChange.getType());
 
@@ -68,7 +71,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
             findCommitsToCheck(refChange.getToHash(), context.getRepository(), commitsToCheck);
 
             for (Commit commit : commitsToCheck) {
-                addFileChangesOnCommit(pathChanges, context.getRepository(), commit);
+                addFileChangesOnCommit(pathChanges, context.getRepository(), commit, yamlFileExtension);
             }
         }
 
@@ -159,14 +162,15 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      * @param repository The repository is being pushed to
      * @param commit The new commit with file changes
      */
-    private void addFileChangesOnCommit(ConcurrentMap<String, Commit> filesWithCommits, Repository repository, Commit commit) {
+    private void addFileChangesOnCommit(ConcurrentMap<String, Commit> filesWithCommits, Repository repository, Commit commit, String yamlFileExtension) {
         final ChangesRequest changesRequest = new ChangesRequest.Builder(repository, commit.getId()).build();
         final Page<Change> changes = commitService.getChanges(changesRequest, PageUtils.newRequest(0, PAGE_REQUEST_LIMIT));
 
         for(Change change : changes.getValues()) {
             LOG.debug("Change type was: " + change.getType().name());
             if (!ChangeType.DELETE.equals(change.getType())) {
-                if (change.getPath().getExtension().equalsIgnoreCase(YAML_FILE_EXTENSION)) {
+                LOG.debug("");
+                if (change.getPath().getExtension().matches(yamlFileExtension)) {
                     if (filesWithCommits.containsKey(change.getPath().toString())) {
                         if (commit.getAuthorTimestamp().after(filesWithCommits.get(change.getPath().toString()).getAuthorTimestamp())) {
                             filesWithCommits.replace(change.getPath().toString(), commit);

@@ -1,0 +1,21 @@
+{namespace com.mcmanus.scm.stash.hook.yamlvalidatorprereceivehook}
+
+/**
+ * @param? config
+ * @param? errors
+ */
+{template .view}
+    {call aui.form.textField}
+        {param id: 'extension' /}
+        {param value: $config['extension'] ? 'yaml' : 'yaml' /}
+        {param labelContent: 'Yaml file extension:' /}
+        {param descriptionText: 'Yaml file extension can be single value (e.g. yaml) or regexp (e.g. ya?ml).' /}
+        {param errorTexts: $errors ? $errors['extension'] : null /}
+    {/call}
+
+    <div class="field-group">
+        <div class="description">
+        Learn more about this field at the <a href="https://github.com/hmcmanus/yaml-validator-hook/wiki" target="_blank">official wiki page</a>.
+        </div>
+    </div>
+{/template}
