@@ -14,8 +14,8 @@
     <description>This is the yaml-validator-hook plugin for Atlassian Bitbucket.</description>
     <packaging>atlassian-plugin</packaging>
     <properties>
-        <bitbucket.version>4.9.1</bitbucket.version>
-        <bitbucket.data.version>4.9.1</bitbucket.data.version>
+        <bitbucket.version>4.11.0</bitbucket.version>
+        <bitbucket.data.version>4.11.0</bitbucket.data.version>
         <amps.version>6.2.2</amps.version>
         <plugin.testrunner.version>1.2.3</plugin.testrunner.version>
         <atlassian.spring.scanner.version>1.2.6</atlassian.spring.scanner.version>
