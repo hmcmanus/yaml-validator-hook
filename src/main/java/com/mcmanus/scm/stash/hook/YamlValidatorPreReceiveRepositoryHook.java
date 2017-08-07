@@ -170,7 +170,8 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
             LOG.debug("Change type was: " + change.getType().name());
             if (!ChangeType.DELETE.equals(change.getType())) {
                 LOG.debug("");
-                if (change.getPath().getExtension().matches(yamlFileExtension)) {
+                String extension = change.getPath().getExtension();
+                if (extension != null && extension.matches(yamlFileExtension)) {
                     if (filesWithCommits.containsKey(change.getPath().toString())) {
                         if (commit.getAuthorTimestamp().after(filesWithCommits.get(change.getPath().toString()).getAuthorTimestamp())) {
                             filesWithCommits.replace(change.getPath().toString(), commit);
