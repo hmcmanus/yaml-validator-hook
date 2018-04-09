@@ -92,6 +92,14 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      * @param commitsToProcess A list of commits which are new
      */
     private void findCommitsToCheck(String hash, Repository repository, Collection<Commit> commitsToProcess) {
+        final String zero = "0000000000000000000000000000000000000000";
+        if (zero.equals(hash)) {
+            // a new hash of 40 `0` means the branch is to be deleted
+            // just let it pass through in that case
+            LOG.debug("Found deletion commit");
+            return;
+        }
+
         if (!commitIndex.isIndexed(hash, repository)) {
             final CommitRequest request = new CommitRequest.Builder(repository, hash).build();
             final Commit commit = commitService.getCommit(request);
