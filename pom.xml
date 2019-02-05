@@ -142,7 +142,7 @@
                             <instanceId>bitbucket</instanceId>
                             <version>${bitbucket.version}</version>
                             <dataVersion>${bitbucket.data.version}</dataVersion>
-                        </product>  
+                        </product>
                     </products>
                 </configuration>
             </plugin>
