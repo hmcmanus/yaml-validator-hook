@@ -8,9 +8,10 @@ import com.atlassian.bitbucket.content.Change;
 import com.atlassian.bitbucket.content.ChangeType;
 import com.atlassian.bitbucket.content.ChangesRequest;
 import com.atlassian.bitbucket.content.ContentService;
-import com.atlassian.bitbucket.hook.HookResponse;
-import com.atlassian.bitbucket.hook.repository.PreReceiveRepositoryHook;
-import com.atlassian.bitbucket.hook.repository.RepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
 import com.atlassian.bitbucket.idx.CommitIndex;
 import com.atlassian.bitbucket.io.TypeAwareOutputSupplier;
 import com.atlassian.bitbucket.repository.RefChange;
@@ -18,29 +19,47 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.util.MoreSuppliers;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageUtils;
+import com.atlassian.plugin.spring.scanner.annotation.export.ExportAsService;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
-import java.io.*;
-import java.util.*;
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import javax.inject.Named;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
-public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveRepositoryHook
+@ExportAsService({YamlValidatorPreReceiveRepositoryHook.class})
+@Named("yamlValidatorRepositoryHook")
+public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
 {
-    private static final Logger LOG = LoggerFactory.getLogger(PreReceiveRepositoryHook.class);
+    private static final Logger LOG = LoggerFactory.getLogger(PreRepositoryHook.class);
 
     private static final int PAGE_REQUEST_LIMIT = 9999;
     private static final String EXTENSION_CONFIG_STRING = "extension";
+    private static final String SUMMARY = "summary";
+    private static final String DETAIL = "detail";
 
+    @ComponentImport
     private final CommitService commitService;
+    @ComponentImport
     private final ContentService contentService;
+    @ComponentImport
     private final CommitIndex commitIndex;
 
-    public YamlValidatorPreReceiveRepositoryHook(CommitService commitService,
-                                                 ContentService contentService,
-                                                 CommitIndex commitIndex
+    @Inject
+    public YamlValidatorPreReceiveRepositoryHook(final CommitService commitService,
+                                                 final ContentService contentService,
+                                                 final CommitIndex commitIndex
                                                  ){
         this.commitService = commitService;
         this.contentService = contentService;
@@ -50,38 +69,33 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
     /**
      * Hook to check yaml files before allowing the push to complete.
      *
-     * @param context The context of the plugin, mostly used for getting the repository enabled
+     * @param repository The repository that the changes are part of
      * @param refChanges A set of changes
-     * @param hookResponse A response to the client attempting to push
+     * @param yamlFileExtension What type of yaml file are we checking
      * @return Whether to allow the push to continue or not
      */
-    @Override
-    public boolean onReceive(RepositoryHookContext context, Collection<RefChange> refChanges, HookResponse hookResponse)
+    public Map<String, String> onReceive(Repository repository, Collection<RefChange> refChanges, String yamlFileExtension)
     {
-        boolean allFilesValid = true;
-        ConcurrentMap<String, Commit> pathChanges = new ConcurrentHashMap<String, Commit>();
-
-        String yamlFileExtension = context.getSettings().getString(EXTENSION_CONFIG_STRING);
+        ConcurrentHashMap<String, String> result = new ConcurrentHashMap<>();
+        ConcurrentMap<String, Commit> pathChanges = new ConcurrentHashMap<>();
 
         for (RefChange refChange : refChanges) {
             LOG.debug("Processing refchange of type: " + refChange.getType());
 
             Collection<Commit> commitsToCheck = Collections.synchronizedList(new ArrayList<>());
 
-            findCommitsToCheck(refChange.getToHash(), context.getRepository(), commitsToCheck);
+            findCommitsToCheck(refChange.getToHash(), repository, commitsToCheck);
 
             for (Commit commit : commitsToCheck) {
-                addFileChangesOnCommit(pathChanges, context.getRepository(), commit, yamlFileExtension);
+                addFileChangesOnCommit(pathChanges, repository, commit, yamlFileExtension);
             }
         }
 
         if (!pathChanges.isEmpty()) {
-            if (!areFilesValid(pathChanges, context.getRepository(), hookResponse)){
-                allFilesValid = false;
-            }
+            areFilesValid(pathChanges, repository, result);
         }
 
-        return allFilesValid;
+        return result;
     }
 
     /**
@@ -105,8 +119,10 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
             final Commit commit = commitService.getCommit(request);
             LOG.debug("Found commit to check " + hash);
             commitsToProcess.add(commit);
-            for (MinimalCommit parent: commit.getParents()) {
-                findCommitsToCheck(parent.getId(), repository, commitsToProcess);
+            if (commit != null) {
+                for (MinimalCommit parent : commit.getParents()) {
+                    findCommitsToCheck(parent.getId(), repository, commitsToProcess);
+                }
             }
         }
     }
@@ -116,11 +132,11 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      *
      * @param pathChanges Map of the string paths with their associated commits
      * @param repository The repository that the push is for
-     * @param hookResponse The response to the client
+     * @param result Map holding the response to be sent back to the client
      *
      * @return A boolean denoting if the yaml files are valid
      */
-    private boolean areFilesValid(ConcurrentMap<String, Commit> pathChanges, Repository repository, HookResponse hookResponse) {
+    private boolean areFilesValid(ConcurrentMap<String, Commit> pathChanges, Repository repository, ConcurrentMap<String, String> result) {
         LOG.info("Found " + pathChanges.size() + " yaml files to validate");
         boolean allFilesAreValid = true;
         try {
@@ -135,14 +151,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
                         os);
 
                 try {
-                    Yaml yaml = new Yaml();
-                    try {
-                        LOG.info("Attempting to validate yaml stream");
-                        yaml.load(outputStream.toString());
-                    } catch (Exception e) {
-                        LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
-                        hookResponse.err().println("ERROR: Invalid yaml file: " + filePath);
-                        hookResponse.err().println(e.getMessage());
+                    if(!checkFile(outputStream.toString(), result, filePath)) {
                         allFilesAreValid = false;
                     }
                 } finally {
@@ -163,6 +172,23 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
         return allFilesAreValid;
     }
 
+    boolean checkFile(String fileString, ConcurrentMap<String, String> result, String filePath) {
+        boolean validFile = true;
+        LoaderOptions loaderOptions = new LoaderOptions();
+        loaderOptions.setAllowDuplicateKeys(true);
+        Yaml yaml = new Yaml(loaderOptions);
+        try {
+            LOG.info("Attempting to validate yaml stream");
+            yaml.load(fileString);
+        } catch (Exception e) {
+            LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
+            result.putIfAbsent(SUMMARY, "ERROR: Invalid yaml file: " + filePath);
+            result.putIfAbsent(DETAIL, e.getMessage());
+            validFile = false;
+        }
+        return validFile;
+    }
+
     /**
      * Creates a map of repository references mapped to the commit that it was changed with
      *
@@ -170,28 +196,46 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreReceiveReposito
      * @param repository The repository is being pushed to
      * @param commit The new commit with file changes
      */
-    private void addFileChangesOnCommit(ConcurrentMap<String, Commit> filesWithCommits, Repository repository, Commit commit, String yamlFileExtension) {
+    public void addFileChangesOnCommit(ConcurrentMap<String, Commit> filesWithCommits, Repository repository, Commit commit, String yamlFileExtension) {
         final ChangesRequest changesRequest = new ChangesRequest.Builder(repository, commit.getId()).build();
         final Page<Change> changes = commitService.getChanges(changesRequest, PageUtils.newRequest(0, PAGE_REQUEST_LIMIT));
 
-        for(Change change : changes.getValues()) {
-            LOG.debug("Change type was: " + change.getType().name());
-            if (!ChangeType.DELETE.equals(change.getType())) {
+        if (changes != null) {
+            for (Change change : changes.getValues()) {
+                LOG.debug("Change type was: " + change.getType().name());
+                if (!ChangeType.DELETE.equals(change.getType())) {
 
-                String extension = null;
-                if (change.getPath() != null) {
-                    extension = change.getPath().getExtension();
-                }
-                if (extension != null && extension.matches(yamlFileExtension)) {
-                    if (filesWithCommits.containsKey(change.getPath().toString())) {
-                        if (commit.getAuthorTimestamp().after(filesWithCommits.get(change.getPath().toString()).getAuthorTimestamp())) {
-                            filesWithCommits.replace(change.getPath().toString(), commit);
+                    String extension = null;
+                    if (change.getPath() != null) {
+                        extension = change.getPath().getExtension();
+                    }
+                    if (extension != null && extension.matches(yamlFileExtension)) {
+                        if (filesWithCommits.containsKey(change.getPath().toString())) {
+                            if (commit.getAuthorTimestamp().after(filesWithCommits.get(change.getPath().toString()).getAuthorTimestamp())) {
+                                filesWithCommits.replace(change.getPath().toString(), commit);
+                            }
+                        } else {
+                            filesWithCommits.putIfAbsent(change.getPath().toString(), commit);
                         }
-                    } else {
-                        filesWithCommits.putIfAbsent(change.getPath().toString(), commit);
                     }
                 }
             }
         }
+    }
+
+    @Nonnull
+    @Override
+    public RepositoryHookResult preUpdate(@Nonnull PreRepositoryHookContext preRepositoryHookContext, @Nonnull RepositoryHookRequest repositoryHookRequest) {
+        RepositoryHookResult result;
+        Map<String, String> processedResults = onReceive(repositoryHookRequest.getRepository(),
+                repositoryHookRequest.getRefChanges(),
+                preRepositoryHookContext.getSettings().getString(EXTENSION_CONFIG_STRING));
+
+        if (processedResults.containsKey(SUMMARY)) {
+            result = RepositoryHookResult.rejected(processedResults.get(SUMMARY), processedResults.get(DETAIL));
+        } else {
+            result = RepositoryHookResult.accepted();
+        }
+        return result;
     }
 }

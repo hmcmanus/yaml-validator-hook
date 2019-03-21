@@ -23,11 +23,6 @@
         <context>yaml-validator-hook</context>
     </web-resource>
 
-    <!-- import from the product container -->
-    <component-import key="commitService" interface="com.atlassian.bitbucket.commit.CommitService"/>
-    <component-import key="contentService" interface="com.atlassian.bitbucket.content.ContentService"/>
-    <component-import key="commitIndex" interface="com.atlassian.bitbucket.idx.CommitIndex"/>
-
     <repository-hook name="Yaml Validator Pre Receive Hook" i18n-name-key="yaml-validator-hook.name"
                      key="yaml-validator-hook" class="com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook">
         <description key="yaml-validator-hook.description">Rejects invalid yaml files pushed to the repository

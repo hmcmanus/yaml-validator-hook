@@ -1,0 +1,22 @@
+---
+stuff1:  false
+stuff2:  true
+stuff3:   true
+
+string1: 'csso/proxy.conf.erb'
+
+hash_prefix::hash1:
+  'firstDoc':
+    childkey1:  "child"
+    childkey2:  'stuff'
+---
+stuff1:  false
+stuff2:  true
+stuff3:   true
+
+string1: 'bla/proxy.conf.erb'
+
+hash_prefix::hash1:
+  'secondDoc':
+    childkey1:  "child"
+    childkey2:  'stuff'
