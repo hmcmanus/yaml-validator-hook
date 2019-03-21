@@ -2,31 +2,28 @@ package com.mcmanus.scm.stash.hook;
 
 import com.atlassian.bitbucket.commit.Commit;
 import com.atlassian.bitbucket.commit.CommitService;
-import com.atlassian.bitbucket.commit.MinimalCommit;
 import com.atlassian.bitbucket.content.*;
 import com.atlassian.bitbucket.idx.CommitIndex;
-import com.atlassian.bitbucket.property.PropertyMap;
 import com.atlassian.bitbucket.repository.Repository;
-import com.atlassian.bitbucket.user.Person;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageUtils;
-import com.mcmanus.scm.stash.hook.YamlValidatorPreReceiveRepositoryHook;
 import org.junit.Test;
-import org.yaml.snakeyaml.Yaml;
+import org.springframework.core.io.ClassPathResource;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 import static org.hamcrest.core.Is.is;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyObject;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -74,4 +71,81 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
 
         assertThat(testPathChanges.size(), is(1));
     }
+
+    @Test
+    public void shouldTestSimpleYamlFile() throws IOException {
+        CommitService commitServiceMock = mock(CommitService.class);
+        ContentService contentServiceMock = mock(ContentService.class);
+        CommitIndex commitIndexMock = mock(CommitIndex.class);
+
+        ClassPathResource classPathResource = new ClassPathResource("good.yaml");
+        File resource = classPathResource.getFile();
+        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+
+        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+                contentServiceMock, commitIndexMock);
+
+        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+        boolean check = hook.checkFile(testString, results, resource.getPath());
+
+        assertTrue(check);
+    }
+
+    @Test
+    public void shouldTestSimpleBadYamlFile() throws IOException {
+        CommitService commitServiceMock = mock(CommitService.class);
+        ContentService contentServiceMock = mock(ContentService.class);
+        CommitIndex commitIndexMock = mock(CommitIndex.class);
+
+        ClassPathResource classPathResource = new ClassPathResource("bad.yaml");
+        File resource = classPathResource.getFile();
+        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+
+        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+                contentServiceMock, commitIndexMock);
+
+        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+        boolean check = hook.checkFile(testString, results, resource.getPath());
+
+        System.out.println(check);
+        assertFalse(check);
+    }
+
+//    @Test
+//    public void shouldTestMultiYamlFile() throws IOException {
+//        CommitService commitServiceMock = mock(CommitService.class);
+//        ContentService contentServiceMock = mock(ContentService.class);
+//        CommitIndex commitIndexMock = mock(CommitIndex.class);
+//
+//        ClassPathResource classPathResource = new ClassPathResource("multi-good.yaml");
+//        File resource = classPathResource.getFile();
+//        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+//
+//        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+//                contentServiceMock, commitIndexMock);
+//
+//        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+//        boolean check = hook.checkFile(testString, results, resource.getPath());
+//
+//        assertTrue(check);
+//    }
+//
+//    @Test
+//    public void shouldTestMultiBadYamlFile() throws IOException {
+//        CommitService commitServiceMock = mock(CommitService.class);
+//        ContentService contentServiceMock = mock(ContentService.class);
+//        CommitIndex commitIndexMock = mock(CommitIndex.class);
+//
+//        ClassPathResource classPathResource = new ClassPathResource("multi-bad.yaml");
+//        File resource = classPathResource.getFile();
+//        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+//
+//        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+//                contentServiceMock, commitIndexMock);
+//
+//        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+//        boolean check = hook.checkFile(testString, results, resource.getPath());
+//
+//        assertFalse(check);
+//    }
 }

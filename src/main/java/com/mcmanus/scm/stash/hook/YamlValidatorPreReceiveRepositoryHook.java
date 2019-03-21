@@ -8,7 +8,10 @@ import com.atlassian.bitbucket.content.Change;
 import com.atlassian.bitbucket.content.ChangeType;
 import com.atlassian.bitbucket.content.ChangesRequest;
 import com.atlassian.bitbucket.content.ContentService;
-import com.atlassian.bitbucket.hook.repository.*;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHook;
+import com.atlassian.bitbucket.hook.repository.PreRepositoryHookContext;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookRequest;
+import com.atlassian.bitbucket.hook.repository.RepositoryHookResult;
 import com.atlassian.bitbucket.idx.CommitIndex;
 import com.atlassian.bitbucket.io.TypeAwareOutputSupplier;
 import com.atlassian.bitbucket.repository.RefChange;
@@ -16,11 +19,16 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.util.MoreSuppliers;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageUtils;
+import com.atlassian.plugin.spring.scanner.annotation.export.ExportAsService;
+import com.atlassian.plugin.spring.scanner.annotation.imports.ComponentImport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.yaml.snakeyaml.LoaderOptions;
 import org.yaml.snakeyaml.Yaml;
 
 import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import javax.inject.Named;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,6 +38,8 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
+@ExportAsService({YamlValidatorPreReceiveRepositoryHook.class})
+@Named("yamlValidatorRepositoryHook")
 public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
 {
     private static final Logger LOG = LoggerFactory.getLogger(PreRepositoryHook.class);
@@ -39,13 +49,17 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
     private static final String SUMMARY = "summary";
     private static final String DETAIL = "detail";
 
+    @ComponentImport
     private final CommitService commitService;
+    @ComponentImport
     private final ContentService contentService;
+    @ComponentImport
     private final CommitIndex commitIndex;
 
-    public YamlValidatorPreReceiveRepositoryHook(CommitService commitService,
-                                                 ContentService contentService,
-                                                 CommitIndex commitIndex
+    @Inject
+    public YamlValidatorPreReceiveRepositoryHook(final CommitService commitService,
+                                                 final ContentService contentService,
+                                                 final CommitIndex commitIndex
                                                  ){
         this.commitService = commitService;
         this.contentService = contentService;
@@ -129,14 +143,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
                         os);
 
                 try {
-                    Yaml yaml = new Yaml();
-                    try {
-                        LOG.info("Attempting to validate yaml stream");
-                        yaml.load(outputStream.toString());
-                    } catch (Exception e) {
-                        LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
-                        result.putIfAbsent(SUMMARY, "ERROR: Invalid yaml file: " + filePath);
-                        result.putIfAbsent(DETAIL, e.getMessage());
+                    if(!checkFile(outputStream.toString(), result, filePath)) {
                         allFilesAreValid = false;
                     }
                 } finally {
@@ -155,6 +162,23 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
         }
 
         return allFilesAreValid;
+    }
+
+    boolean checkFile(String fileString, ConcurrentMap<String, String> result, String filePath) {
+        boolean validFile = true;
+        LoaderOptions loaderOptions = new LoaderOptions();
+        loaderOptions.setAllowDuplicateKeys(true);
+        Yaml yaml = new Yaml(loaderOptions);
+        try {
+            LOG.info("Attempting to validate yaml stream");
+            yaml.load(fileString);
+        } catch (Exception e) {
+            LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
+            result.putIfAbsent(SUMMARY, "ERROR: Invalid yaml file: " + filePath);
+            result.putIfAbsent(DETAIL, e.getMessage());
+            validFile = false;
+        }
+        return validFile;
     }
 
     /**
@@ -195,10 +219,12 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
     @Override
     public RepositoryHookResult preUpdate(@Nonnull PreRepositoryHookContext preRepositoryHookContext, @Nonnull RepositoryHookRequest repositoryHookRequest) {
         RepositoryHookResult result;
-        if (onReceive(repositoryHookRequest.getRepository(),
+        Map<String, String> processedResults = onReceive(repositoryHookRequest.getRepository(),
                 repositoryHookRequest.getRefChanges(),
-                preRepositoryHookContext.getSettings().getString(EXTENSION_CONFIG_STRING)).containsKey(SUMMARY)) {
-            result = RepositoryHookResult.rejected(SUMMARY, DETAIL);
+                preRepositoryHookContext.getSettings().getString(EXTENSION_CONFIG_STRING));
+
+        if (processedResults.containsKey(SUMMARY)) {
+            result = RepositoryHookResult.rejected(processedResults.get(SUMMARY), processedResults.get(DETAIL));
         } else {
             result = RepositoryHookResult.accepted();
         }
