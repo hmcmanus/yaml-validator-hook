@@ -57,3 +57,7 @@ https://developer.atlassian.com/display/DOCS/Introduction+to+the+Atlassian+Plugi
 
 Example plugins:
 https://bitbucket.org/atlassian/bitbucket-server-example-plugins/src/9e1728cfab668ab0f8c1c4ada507994dffa5b5e6/hooks-guide/src/main/java/com/atlassian/bitbucket/server/examples/BranchInReviewHook.java?at=master&fileviewer=file-view-default
+
+## EULA
+
+See here for EULA: https://github.com/hmcmanus/yaml-validator-hook/wiki/UserTerms
