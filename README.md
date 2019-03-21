@@ -52,3 +52,8 @@ Full documentation is always available at:
 
 https://developer.atlassian.com/display/DOCS/Introduction+to+the+Atlassian+Plugin+SDK
 
+
+## References
+
+Example plugins:
+https://bitbucket.org/atlassian/bitbucket-server-example-plugins/src/9e1728cfab668ab0f8c1c4ada507994dffa5b5e6/hooks-guide/src/main/java/com/atlassian/bitbucket/server/examples/BranchInReviewHook.java?at=master&fileviewer=file-view-default
