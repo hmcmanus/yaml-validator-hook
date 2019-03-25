@@ -141,11 +141,75 @@
                     <products>
                         <product>
                             <id>bitbucket</id>
-                            <instanceId>bitbucket</instanceId>
+                            <instanceId>bitbucket-node-1</instanceId>
                             <version>${bitbucket.version}</version>
                             <dataVersion>${bitbucket.data.version}</dataVersion>
-                        </product>  
+                            <httpPort>6991</httpPort>
+                            <systemPropertyVariables>
+                                <bitbucket.shared.home>${project.basedir}/target/bitbucket-node-1/home/shared</bitbucket.shared.home>
+                                <!-- override the SSH port used for this node -->
+                                <plugin.ssh.port>6997</plugin.ssh.port>
+                                <!-- override database settings so both nodes use a single database -->
+                                <jdbc.driver>com.mysql.jdbc.Driver</jdbc.driver>
+                                <jdbc.url>jdbc:mysql://localhost:3306/bitbucket?characterEncoding=utf8&amp;useUnicode=true&amp;sessionVariables=storage_engine%3DInnoDB</jdbc.url>
+                                <jdbc.user>bitbucketuser</jdbc.user>
+                                <jdbc.password>password</jdbc.password>
+                                <!-- allow this node to find other nodes via TCP/IP -->
+                                <hazelcast.network.tcpip>true</hazelcast.network.tcpip>
+                                <!-- set to true if your load balancer supports stick sessions -->
+                                <hazelcast.http.stickysessions>false</hazelcast.http.stickysessions>
+                            </systemPropertyVariables>
+                            <libArtifacts>
+                                <!-- ensure MySQL drivers are available -->
+                                <libArtifact>
+                                    <groupId>mysql</groupId>
+                                    <artifactId>mysql-connector-java</artifactId>
+                                    <version>5.1.32</version>
+                                </libArtifact>
+                            </libArtifacts>
+                        </product>
+                        <!-- Node 2 -->
+                        <product>
+                            <id>bitbucket</id>
+                            <instanceId>bitbucket-node-2</instanceId>
+                            <version>${bitbucket.version}</version>
+                            <dataVersion>${bitbucket.data.version}</dataVersion>
+                            <!-- override the HTTP port used for this node -->
+                            <httpPort>6992</httpPort>
+                            <systemPropertyVariables>
+                                <bitbucket.shared.home>${project.basedir}/target/bitbucket-node-1/home/shared</bitbucket.shared.home>
+                                <!-- override the SSH port used for this node -->
+                                <plugin.ssh.port>6998</plugin.ssh.port>
+                                <!-- override database settings so both nodes use a single database -->
+                                <jdbc.driver>com.mysql.jdbc.Driver</jdbc.driver>
+                                <jdbc.url>jdbc:mysql://localhost:3306/bitbucket?characterEncoding=utf8&amp;useUnicode=true&amp;sessionVariables=storage_engine%3DInnoDB</jdbc.url>
+                                <jdbc.user>bitbucketuser</jdbc.user>
+                                <jdbc.password>password</jdbc.password>
+                                <!-- allow cluster nodes to find each other over TCP/IP thus enabling clustering for this node -->
+                                <hazelcast.network.tcpip>true</hazelcast.network.tcpip>
+                                <!-- set to true if your load balancer supports stick sessions -->
+                                <hazelcast.http.stickysessions>false</hazelcast.http.stickysessions>
+                            </systemPropertyVariables>
+                            <libArtifacts>
+                                <!-- ensure MySQL drivers are available -->
+                                <libArtifact>
+                                    <groupId>mysql</groupId>
+                                    <artifactId>mysql-connector-java</artifactId>
+                                    <version>5.1.32</version>
+                                </libArtifact>
+                            </libArtifacts>
+                        </product>
                     </products>
+                    <testGroups>
+                        <!-- tell AMPS / Maven which products ie nodes to run for the named testGroup 'clusterTestGroup' -->
+                        <testGroup>
+                            <id>clusterTestGroup</id>
+                            <productIds>
+                                <productId>bitbucket-node-1</productId>
+                                <productId>bitbucket-node-2</productId>
+                            </productIds>
+                        </testGroup>
+                    </testGroups>
                     <instructions>
                         <Atlassian-Plugin-Key>${atlassian.plugin.key}</Atlassian-Plugin-Key>
 
@@ -164,6 +228,53 @@
                         <!-- Ensure plugin is Spring powered -->
                         <Spring-Context>*</Spring-Context>
                     </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>load-balancer-maven-plugin</artifactId>
+                <version>1.1</version>
+                <executions>
+                    <execution>
+                        <id>start-load-balancer</id>
+                        <phase>pre-integration-test</phase>
+                        <goals>
+                            <goal>start</goal>
+                        </goals>
+                    </execution>
+                    <execution>
+                        <id>stop-load-balancer</id>
+                        <phase>post-integration-test</phase>
+                        <goals>
+                            <goal>stop</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <balancers>
+                        <balancer>
+                            <port>7990</port>
+                            <targets>
+                                <target>
+                                    <port>6991</port>
+                                </target>
+                                <target>
+                                    <port>6992</port>
+                                </target>
+                            </targets>
+                        </balancer>
+                        <balancer>
+                            <port>7999</port>
+                            <targets>
+                                <target>
+                                    <port>6997</port>
+                                </target>
+                                <target>
+                                    <port>6998</port>
+                                </target>
+                            </targets>
+                        </balancer>
+                    </balancers>
                 </configuration>
             </plugin>
             <plugin>
