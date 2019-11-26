@@ -179,7 +179,13 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
         Yaml yaml = new Yaml(loaderOptions);
         try {
             LOG.info("Attempting to validate yaml stream");
-            yaml.load(fileString);
+            int documentCount = 1;
+            Iterator<Object> it = yaml.loadAll(fileString).iterator();
+            while (it.hasNext()) {
+                LOG.info("Validating document #" + documentCount);
+                it.next();
+                documentCount++;
+            }
         } catch (Exception e) {
             LOG.info("Rejecting push because following yaml file is invalid: " + filePath);
             result.putIfAbsent(SUMMARY, "ERROR: Invalid yaml file: " + filePath);
