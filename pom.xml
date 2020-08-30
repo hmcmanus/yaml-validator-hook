@@ -14,9 +14,9 @@
     <description>This is the yaml-validator-hook plugin for Atlassian Bitbucket.</description>
     <packaging>atlassian-plugin</packaging>
     <properties>
-        <bitbucket.version>7.2.1</bitbucket.version>
-        <bitbucket.data.version>7.2.1</bitbucket.data.version>
-        <amps.version>8.0.2</amps.version>
+        <bitbucket.version>7.5.1</bitbucket.version>
+        <bitbucket.data.version>7.5.1</bitbucket.data.version>
+        <amps.version>8.1.1</amps.version>
 
         <!-- This key is used to keep the consistency between the key in atlassian-plugin.xml and the key to generate bundle. -->
         <atlassian.plugin.key>${project.groupId}.${project.artifactId}</atlassian.plugin.key>
@@ -24,7 +24,7 @@
         <atlassian.spring.scanner.version>2.1.7</atlassian.spring.scanner.version>
         <javax.inject.version>1</javax.inject.version>
         <jsr311.version>1.1.1</jsr311.version>
-        <plugin.testrunner.version>2.0.1</plugin.testrunner.version>
+        <plugin.testrunner.version>2.0.2</plugin.testrunner.version>
     </properties>
 
     <scm>
@@ -101,7 +101,7 @@
             <groupId>com.atlassian.plugin</groupId>
             <artifactId>atlassian-spring-scanner-annotation</artifactId>
             <version>${atlassian.spring.scanner.version}</version>
-            <scope>compile</scope>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>javax.ws.rs</groupId>
