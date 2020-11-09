@@ -14,8 +14,8 @@
     <description>This is the yaml-validator-hook plugin for Atlassian Bitbucket.</description>
     <packaging>atlassian-plugin</packaging>
     <properties>
-        <bitbucket.version>7.5.1</bitbucket.version>
-        <bitbucket.data.version>7.5.1</bitbucket.data.version>
+        <bitbucket.version>7.7.1</bitbucket.version>
+        <bitbucket.data.version>7.7.1</bitbucket.data.version>
         <amps.version>8.1.1</amps.version>
 
         <!-- This key is used to keep the consistency between the key in atlassian-plugin.xml and the key to generate bundle. -->
@@ -50,7 +50,7 @@
         <dependency>
             <groupId>org.yaml</groupId>
             <artifactId>snakeyaml</artifactId>
-            <version>1.25</version>
+            <version>1.27</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
