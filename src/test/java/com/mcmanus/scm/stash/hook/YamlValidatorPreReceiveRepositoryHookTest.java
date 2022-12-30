@@ -8,6 +8,7 @@ import com.atlassian.bitbucket.repository.Repository;
 import com.atlassian.bitbucket.util.Page;
 import com.atlassian.bitbucket.util.PageRequest;
 import com.atlassian.bitbucket.util.PageUtils;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
 
@@ -147,5 +148,25 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
         assertFalse(check);
+    }
+
+    @Ignore("https://github.com/hmcmanus/yaml-validator-hook/issues/25")
+    @Test
+    public void shouldTestTaggedYamlFile() throws IOException {
+        CommitService commitServiceMock = mock(CommitService.class);
+        ContentService contentServiceMock = mock(ContentService.class);
+        CommitIndex commitIndexMock = mock(CommitIndex.class);
+
+        ClassPathResource classPathResource = new ClassPathResource("tagged.yaml");
+        File resource = classPathResource.getFile();
+        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+
+        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+                contentServiceMock, commitIndexMock);
+
+        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+        boolean check = hook.checkFile(testString, results, resource.getPath());
+
+        assertTrue(check);
     }
 }
