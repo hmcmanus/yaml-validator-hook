@@ -177,7 +177,7 @@ public class YamlValidatorPreReceiveRepositoryHook implements PreRepositoryHook
         boolean validFile = true;
         LoaderOptions loaderOptions = new LoaderOptions();
         loaderOptions.setAllowDuplicateKeys(true);
-        Yaml yaml = new Yaml(loaderOptions);
+        Yaml yaml = new Yaml(new YamlValidatorConstructor(loaderOptions));
         try {
             LOG.info("Attempting to validate yaml stream");
             int documentCount = 1;

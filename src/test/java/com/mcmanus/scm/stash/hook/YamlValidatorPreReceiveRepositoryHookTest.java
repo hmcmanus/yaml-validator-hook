@@ -150,7 +150,6 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         assertFalse(check);
     }
 
-    @Ignore("https://github.com/hmcmanus/yaml-validator-hook/issues/25")
     @Test
     public void shouldTestTaggedYamlFile() throws IOException {
         CommitService commitServiceMock = mock(CommitService.class);
