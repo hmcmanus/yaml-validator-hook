@@ -1,0 +1,8 @@
+foo: !foo '42
+bar: !bar |
+  multi
+  line
+baz: !baz
+  - a
+  - b
+  - c
