@@ -168,4 +168,23 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
 
         assertTrue(check);
     }
+
+    @Test
+    public void shouldTestMalformedTaggedYamlFile() throws IOException {
+        CommitService commitServiceMock = mock(CommitService.class);
+        ContentService contentServiceMock = mock(ContentService.class);
+        CommitIndex commitIndexMock = mock(CommitIndex.class);
+
+        ClassPathResource classPathResource = new ClassPathResource("tagged-bad.yaml");
+        File resource = classPathResource.getFile();
+        String testString = new String(Files.readAllBytes(Paths.get(resource.getPath())));
+
+        YamlValidatorPreReceiveRepositoryHook hook = new YamlValidatorPreReceiveRepositoryHook(commitServiceMock,
+                contentServiceMock, commitIndexMock);
+
+        ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
+        boolean check = hook.checkFile(testString, results, resource.getPath());
+
+        assertFalse(check);
+    }
 }
