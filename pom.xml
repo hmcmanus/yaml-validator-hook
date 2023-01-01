@@ -4,7 +4,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.mcmanus.scm.stash</groupId>
     <artifactId>yaml-validator-hook</artifactId>
-    <version>4.1.0</version>
+    <version>4.1.1-SNAPSHOT</version>
     <organization>
         <name>Hugh McManus</name>
         <url>https://github.com/hmcmanus/yaml-validator-hook</url>
@@ -26,8 +26,8 @@
     </properties>
 
     <scm>
-        <developerConnection>scm:git:git://github.com/hmcmanus/yaml-validator-hook.git</developerConnection>
-        <connection>scm:git:git://github.com/hmcmanus/yaml-validator-hook.git</connection>
+        <developerConnection>scm:git:git://github.com:hmcmanus/yaml-validator-hook.git</developerConnection>
+        <connection>scm:git:git://github.com:hmcmanus/yaml-validator-hook.git</connection>
         <url>git://github.com/hmcmanus/yaml-validator-hook.git</url>
         <tag>4.1.0</tag>
     </scm>
