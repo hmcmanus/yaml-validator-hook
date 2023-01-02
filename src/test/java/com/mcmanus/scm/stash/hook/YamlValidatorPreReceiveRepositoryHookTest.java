@@ -89,7 +89,7 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        assertTrue(check);
+        assertTrue("Error " + results.get("detail"), check);
     }
 
     @Test
@@ -108,8 +108,7 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        System.out.println(check);
-        assertFalse(check);
+        assertFalse("Uncaught bad data", check);
     }
 
     @Test
@@ -128,7 +127,7 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        assertTrue(check);
+        assertTrue("Error " + results.get("detail"), check);
     }
 
     @Test
@@ -147,7 +146,7 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        assertFalse(check);
+        assertFalse("Uncaught bad data", check);
     }
 
     @Test
@@ -166,7 +165,7 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        assertTrue(check);
+        assertTrue("Error " + results.get("detail"), check);
     }
 
     @Test
@@ -185,6 +184,6 @@ public class YamlValidatorPreReceiveRepositoryHookTest {
         ConcurrentMap<String, String> results = new ConcurrentHashMap<>();
         boolean check = hook.checkFile(testString, results, resource.getPath());
 
-        assertFalse(check);
+        assertFalse("Uncaught bad data", check);
     }
 }
