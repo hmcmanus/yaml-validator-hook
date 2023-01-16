@@ -22,6 +22,7 @@ test_good() {
     cd rep_1
     cp ${DIR}/good.yaml ./good-${ID}.yaml
     cp ${DIR}/multi-good.yaml ./multi-good-${ID}.yaml
+    cp ${DIR}/tagged.yaml ./tagged-${ID}.yaml
     git add .
     git commit -am "Testing with good ${ID}"
     git push origin master
@@ -33,23 +34,37 @@ test_bad() {
     # The following should fail so lets make sure that it does
     set +e
     cp ${DIR}/bad.yaml ./bad-${ID}.yaml
-    git add .
+    git add ./bad-${ID}.yaml
     git commit -am "Testing with single bad ${ID}"
     git push origin master
     if [[ ! $? ]];then
         echo "ERROR: If the previous command worked then the hook didn't work - bad ${ID}"
         exit 1
     fi
+    git reset HEAD~1
+    rm ./bad-${ID}.yaml
 
     cp ${DIR}/multi-bad.yaml ./multi-bad-${ID}.yaml
-    git add .
+    git add ./multi-bad-${ID}.yaml
     git commit -am "Testing with multi bad ${ID}"
     git push origin master
     if [[ ! $? ]];then
         echo "ERROR: If the previous command worked then the hook didn't work - multi bad ${ID}"
         exit 1
     fi
+    git reset HEAD~1
+    rm ./multi-bad-${ID}.yaml
 
+    cp ${DIR}/tagged-bad.yaml ./tagged-bad-${ID}.yaml
+    git add ./tagged-bad-${ID}.yaml
+    git commit -am "Testing with tagged bad ${ID}"
+    git push origin master
+    if [[ ! $? ]];then
+        echo "ERROR: If the previous command worked then the hook didn't work - tagged bad ${ID}"
+        exit 1
+    fi
+    git reset HEAD~1
+    rm ./tagged-bad-${ID}.yaml
 }
 
 enable_plugin() {
